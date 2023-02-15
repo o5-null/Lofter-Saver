@@ -2,12 +2,17 @@ import requests
 from readability import Document
 from bs4 import BeautifulSoup
 from tqdm import tqdm
+import wget
+import unicodedata#标准编码库
 
 from pathlib import Path
 import re
 import os
+
+from datetime import datetime
 import time
 import json
+import pickle#数据持久化
 
 
 brower = requests.Session() #创建浏览器
@@ -19,6 +24,8 @@ headers_phone = {
     }
 api_url = 'http://url2api.applinzi.com/' # URL2Article API地址，使用体验版或购买独享资源
 
+api_headers = {'User-Agent': 'LOFTER-Android 7.3.4 (PRA-AL00X; Android 8.0.0; null) WIFI'}
+api_cookies = {'Cookie': 'usertrack=dZPgEWPiVMNF6YfwJEIHAg==; NEWTOKEN=ZGUyN2NjOTE1YzE2ZmIwOTM0ZGU5MTIwYjJkZjBhNDJkMDI3YTliNGE4M2ZhMjkxYmY3ODZkN2VkNWRhZTBkNDE1Y2NkNDg4ZDUyMDAzZWNmNWUyMjgwNWY5NTQ2MGZm; NTESwebSI=DFD9B345542ECECF843D7DC7D99313F2.lofter-tomcat-docker-lftpro-3-avkys-cd6be-774f69457-rggg6-8080'}
 
 #get
 def gets(url):
@@ -27,6 +34,24 @@ def gets(url):
         response = brower.get(url=url,headers=headers,timeout=5)
         if response.status_code == 200:
             return response.text
+        if response.status_code == 404:
+            print('网址不存在')
+            return 'null'
+        print(response.status_code)
+        print(url+'访问出错')
+        time.sleep(1)
+        gets(url)
+    except:
+        print(url+'访问崩溃,请检查网络')
+        time.sleep(1)
+        gets(url)
+
+def api_post(url):
+    try:
+        #cj = {i.split("=")[0]:i.split("=")[1] for i in api_cookies.split(";")}
+        response = brower.post(url=url,headers=api_headers,cookies=api_cookies,timeout=5)
+        if response.status_code == 200:
+            return response
         if response.status_code == 404:
             print('网址不存在')
             return 'null'
@@ -41,10 +66,11 @@ def gets(url):
 
 #清洗文件名
 def clean_name(strs):
-    strs = re.sub(r'/:<>?/\^|@& ', "",strs)
+    strs = unicodedata.normalize('NFKD',strs)
+    strs = re.sub(r'/<>?/\^|@& ', "",strs)
     strs = strs.replace('@','')
     strs = strs.replace('&','')
-    strs = strs.replace(' ','_')
+    strs = strs.replace(':','：')
     # 去除不可见字符
     return strs
 
@@ -62,14 +88,42 @@ def dic(info):
 #获取与修改下载列表
 def downlist(set='null'):
     if set == 'null':
-        if os.path.exists('downlist.json'):
-            with open('downlist.json','r') as f:
-                list = json.load(f)
+        if os.path.exists('downlist.obj') and os.path.getsize('downlist.obj') > 0:
+            with open('downlist.obj','rb') as f:
+                list = pickle.load(f)
             return list
+        else :
+            with open('downlist.obj','wb') as f:
+                pickle.dump([],f)
         return []
     else:
-        with open('downlist.json','w') as f:
-            json.dump(set,f)
+        with open('downlist.obj','wb') as f:
+            pickle.dump(set,f)
+
+#获取与修改完成列表
+def finlist(set='null'):
+    if set == 'null':
+        if os.path.exists('finlist.obj') and os.path.getsize('finlist.obj') > 0:
+            with open('finlist.obj','rb') as f:
+                list = pickle.load(f)
+            return list
+        else :
+            with open('finlist.obj','wb') as f:
+                pickle.dump([],f)
+        return []
+    else:
+        with open('finlist.obj','wb') as f:
+            pickle.dump(set,f)
+
+#删除下载任务
+def del_downlist(info):
+    old_downlist = downlist()
+    new_downlist = []
+    for a in old_downlist:#查找一致id的内容并排除
+        if a['targetblogid'] != info['targetblogid'] or a['postid'] != info['postid']:
+            new_downlist.append(a)
+    downlist(new_downlist)#重新写入下载列表
+    return
 
 def get_set():
     with open('set.json','r') as f:
@@ -140,7 +194,7 @@ def down_img(img,save_dir):
     with open(Path(save_dir+'/url.txt'),'w') as f:
         f.write(sep.join(img))
     for url in tqdm(img,desc='图片下载中：',unit='img'):
-        os.system('wget -N -nv '+url+' -P '+save_dir)
+        wget.download(url,save_dir)
     #os.system('aria2c --quiet true -j 10 --continue=true --dir="'+str(Path(save_dir))+'" -i "'+str(Path(save_dir+'/url.txt'))+'"')
     return
 
@@ -196,6 +250,47 @@ def lofter_info(data):
     print(info['title'])
     return info
 
+#lofter客户端api解析引擎
+def lofter_api(targetblogid:int,postid:int) -> dict:
+    """
+    输入targetblogid,blogid
+    调用安卓客户端oldapi
+
+    status = api状态
+    msg = 状态信息
+    title = 文章标题
+    writer name = 作者名
+    writer img = 作者头图
+    info = 文章内容
+    img = 图片链接
+    """
+
+    json_answer = api_post('https://api.lofter.com/oldapi/post/detail.api?product=lofter-android-7.3.4&targetblogid='+str(targetblogid)+'&supportposttypes=1,2,3,4,5,6&offset=0&postdigestnew=1&postid='+str(postid)+'&blogId='+str(targetblogid)+'&checkpwd=1&needgetpoststat=1').json()
+    info = {}
+    info['targetblogid'] = targetblogid
+    info['postid'] = postid
+    info['status'] = json_answer['meta']['status']#api状态
+    info['msg'] = json_answer['meta']['msg']#状态信息
+    try:#某些特殊玩意根本没有标题参数
+        info['title'] = json_answer['response']['posts'][0]['post']['title']#文章标题
+    except:
+        info['title'] = datetime.utcnow().strftime('%Y-%m-%d %H-%M-%S %f')
+    if info['title'] == '':
+        info['title'] = datetime.utcnow().strftime('%Y-%m-%d %H-%M-%S %f')
+    info['writer'] = {}
+    info['writer']['name'] = json_answer['response']['posts'][0]['post']['blogInfo']['blogNickName']#作者名
+    info['writer']['img'] = json_answer['response']['posts'][0]['post']['blogInfo']['bigAvaImg']#作者头图
+    info['info'] = json_answer['response']['posts'][0]['post']['content']#文章内容
+    info['type'] = json_answer['response']['posts'][0]['post']['type']#文章类型 1为文档 2为含有图片 3为音乐（？
+    info['img'] = []
+    if info['type'] == 2:
+        for a in json.loads(json_answer['response']['posts'][0]['post']['photoLinks']):#图片链接
+            info['img'].append(a['raw'])
+        #os.makedirs(Path('bug'),exist_ok=True)#创建临时文件夹
+        #save_json(str(Path('bug/'+str(targetblogid)+'_'+str(postid)+'.json')),json_answer)
+        #print('出现错误')
+    return info
+
 #提取页面文章列表
 def lofter_post_list(url):
     page = 0
@@ -221,7 +316,7 @@ def lofter_post_list(url):
     print('共提取'+str(len(post))+'个文章')
     return post
 
-def lofter_down(data,local_dir):
+def down(data,local_dir):
     text = clean_1(data['html']) #清洗文本
     #检查是否有有效文本信息
     test = text['txt'].replace('\n','')
@@ -279,3 +374,4 @@ def lofter_down(data,local_dir):
     print('索引链接创建完成')
     print('本地化完成')
     return
+

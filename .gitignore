@@ -1,0 +1,7 @@
+__pycache__
+*.json
+*.html
+*.obj
+build
+dist
+__pycache__
