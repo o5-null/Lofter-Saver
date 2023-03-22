@@ -67,10 +67,11 @@ def api_post(url):
 #清洗文件名
 def clean_name(strs):
     strs = unicodedata.normalize('NFKD',strs)
-    strs = re.sub(r'/<>?/\^|@& ', "",strs)
+    strs = re.sub(r'/<>/\^|@&', "",strs)
     strs = strs.replace('@','')
     strs = strs.replace('&','')
     strs = strs.replace(':','：')
+    strs = strs.replace('?','？')
     # 去除不可见字符
     return strs
 

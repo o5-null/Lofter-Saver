@@ -208,7 +208,7 @@ def lofter_print(info):
                 ],size='1fr 50px 25px auto 1fr').style('border: 1px solid #e9ecef;border-radius: .25rem')#限制up头像大小
         info_title = out.put_text(info['title']).style('border: 1px solid #e9ecef;border-radius: .25rem;font-size:1.5em;font-weight:bold;text-align:center')#标题
         out.put_column([info_title],size='auto 10px auto 10px auto').style('margin-top: 0.5rem;margin-bottom: 0.5rem')#设置为垂直排布
-        control_buttom = ioin.actions(buttons=[{'label':'添加下载','value':'0'},{'label':'退出界面','value':'2','color':'danger'}])#创建按键
+        control_buttom = ioin.actions(buttons=[{'label':'添加下载','value':'0'},{'label':'退出界面','value':'1','color':'danger'}])#创建按键
         if control_buttom == '0':#如果选择下载被勾选部分
             downlist = core.downlist()#获取下载列表
             downlist.append(info)#添加任务至下载列表
