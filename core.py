@@ -13,7 +13,8 @@ from datetime import datetime
 import time
 import json
 import pickle#数据持久化
-
+list = []
+fin_list = []
 
 brower = requests.Session() #创建浏览器
 headers = {
@@ -72,6 +73,7 @@ def clean_name(strs):
     strs = strs.replace('&','')
     strs = strs.replace(':','：')
     strs = strs.replace('?','？')
+    strs = strs.replace('|',' ')
     # 去除不可见字符
     return strs
 
@@ -88,7 +90,9 @@ def dic(info):
 
 #获取与修改下载列表
 def downlist(set='null'):
+    global list
     if set == 'null':
+        return list
         if os.path.exists('downlist.obj') and os.path.getsize('downlist.obj') > 0:
             with open('downlist.obj','rb') as f:
                 list = pickle.load(f)
@@ -98,12 +102,15 @@ def downlist(set='null'):
                 pickle.dump([],f)
         return []
     else:
+        list = set
         with open('downlist.obj','wb') as f:
             pickle.dump(set,f)
 
 #获取与修改完成列表
 def finlist(set='null'):
+    global fin_list
     if set == 'null':
+        return fin_list
         if os.path.exists('finlist.obj') and os.path.getsize('finlist.obj') > 0:
             with open('finlist.obj','rb') as f:
                 list = pickle.load(f)
@@ -113,6 +120,7 @@ def finlist(set='null'):
                 pickle.dump([],f)
         return []
     else:
+        fin_list = set
         with open('finlist.obj','wb') as f:
             pickle.dump(set,f)
 
@@ -153,6 +161,7 @@ def clean_1(data): #获取网站正文文本
         #获取txt格式
         txt = doc.summary().replace('</p>','\n')#doc.summary()为提取的网页正文但包含html控制符，这一步是替换换行符
         txt = re.sub(r'</?\w+[^>]*>', '', txt)      #这一步是去掉<****>内的内容
+        txt = txt.replace('&nbsp;','')
         #创个字典存放数据
         fine = {}
         fine['title'] = title
@@ -272,6 +281,19 @@ def lofter_api(targetblogid:int,postid:int) -> dict:
     info['postid'] = postid
     info['status'] = json_answer['meta']['status']#api状态
     info['msg'] = json_answer['meta']['msg']#状态信息
+    #判断作品状态
+    if str(info['status']) == '4202':#作品被删除
+        print(info['msg'])
+        info['status'] = 404
+        info['title'] = '错误'
+        info['writer'] = {}
+        info['writer']['name'] = '错误'#作者名
+        info['writer']['img'] = ''#作者头图
+        info['info'] = ''#文章内容
+        info['type'] = 1#文章类型 1为文档 2为含有图片 3为音乐（？
+        info['img'] = []
+        return info
+
     try:#某些特殊玩意根本没有标题参数
         info['title'] = json_answer['response']['posts'][0]['post']['title']#文章标题
     except:

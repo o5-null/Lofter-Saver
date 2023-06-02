@@ -28,9 +28,13 @@ if Path('set.json').exists():
 #开始下载任务
 def start_download():
     list = core.downlist()#获取下载列表
+    list = core.dic(list)
+    fin_list = 0
+    all_list = len(list)
+
     while len(list) != 0:#当下载任务不为0时
+        fin_list += 1
         lofter_info_down(list[0],set['download'])#下载任务
-        time.sleep(0.3)
         core.del_downlist(list[0])#删除下载完成的任务
 
         #添加到下载完成列表
@@ -39,7 +43,7 @@ def start_download():
         core.finlist(fin)
 
         #刷新下载进度条
-        value = len(fin) / len(list)
+        value = fin_list / all_list
         out.set_processbar('down_process',value)
         list = core.downlist()#刷新下载任务
     out.toast('下载任务已清空', position='center', color='success', duration=0)#显示完成通知
@@ -85,7 +89,7 @@ def show_fin_list():
     #加载任务列表
     data_list = core.finlist()#获取需要下载的列表
     if len(data_list) == 0:#如果列表为空则等待
-        time.sleep(1)
+        time.sleep(0.5)
         show_fin_list()
     show_list = []
     #初始化
@@ -193,6 +197,8 @@ def lofter_post_list(url):
 def lofter_print(info):
     #清除旧显示内容
     out.clear('info')
+    if str(info['status']) == '404':
+        return 'out'
     with out.use_scope('info'):#进入视频信息域
         with out.use_scope('up_info'):#切换到up信息域
             face = requests.get(info['writer']['img']).content#缓存图片
@@ -230,6 +236,10 @@ def lofter_list_print(list:list):
             a += 1
             print(url)
             answer = lofter_down(url)#申请数据
+            #如果无法获取数据则跳过
+            if str(answer['status']) == '404':
+                out.toast('哎呀，有作品无法获取',position='left', color='error', duration=1)#弹出提示
+                continue
             out.set_processbar('get_api',a / len(list))#刷新进度条
             info_list.append(answer)
         #遍历创建标题列表
@@ -265,7 +275,7 @@ def lofter_down(url):
     if answer['status'] != 200:#如果返回不正常
         #弹出错误弹窗
         out.toast(answer['msg'],color='error',duration='0')#弹出错误弹窗
-        return
+        return answer
     return answer
     
 
