@@ -165,33 +165,6 @@ def lofter_info_down(info,local_dir):
     core.del_downlist(info)#删除下载任务
     return
 
-#提取页面文章列表
-def lofter_post_list(url):
-    page = 0
-    post = []
-    while 1==1:
-        page += 1
-        if page == 1:
-            post_url = url
-        else:
-            post_url = url+'?page='+str(page)
-        data = core.gets(post_url)
-        if data == 'null':
-            return 'null'
-        kk = re.compile('"(https://.*?\.lofter\.com/post/.*?_.*?)"')
-        post_list = kk.findall(data)
-        print('正在解析第'+str(page)+'页')
-        out.toast('正在解析第'+str(page)+'页',position='left', color='info', duration=1)#弹出提示
-        post_list = core.dic(post_list)
-        if len(core.dic(post + post_list)) - len(post) == 0:
-            break
-        post = core.dic(post + post_list)
-        print('本页提取'+str(len(post_list))+'个文章')
-        print('已提取'+str(len(post))+'个文章')
-        out.toast('已提取'+str(len(post))+'个文章',position='left', color='info', duration=1)#弹出提示
-    print('共提取'+str(len(post))+'个文章')
-    out.toast('已提取'+str(len(post))+'个文章',position='left', color='success', duration=0)#弹出提示
-    return post
 
 #显示文档信息
 def lofter_print(info):
@@ -285,16 +258,13 @@ def start_url():
     url = pin.pin['url_input']#获取输入
     if 'lofter' in url:#如果为lofter地址
         if '/post/' not in url:#尝试批量获取
-            list = lofter_post_list(url)
-            lofter_list_print(list)#显示列表
-            #清除旧显示内容
-            out.clear('info')
-            return
-        answer = lofter_down(url)
+            pass
+        answer = core.lofter_request_info(url)
+        print(answer)
         #显示内容
-        lofter_print(answer)
+        #lofter_print(answer)
         #清除旧显示内容
-        out.clear('info')
+        #out.clear('info')
         return
 
 
@@ -353,6 +323,6 @@ print('Made in Mr.G')
 print('程序初始化。。。。')
 show_down_list_core = threading.Thread(target=show_down_list)#下载列表
 show_fin_list_core = threading.Thread(target=show_fin_list)#完成列表
-io.config(title='Jithon 2.0 Beta',description='基于python的webui实现',theme='yeti')
+io.config(title='LofterSaver 1.3 Dev',description='基于python的webui实现',theme='yeti')
 print('主程序启动,如未自动跳转请打开http://127.0.0.1:8080')
 io.start_server(main,host='127.0.0.1',port=8080,debug=True,cdn=False,auto_open_webbrowser=True)

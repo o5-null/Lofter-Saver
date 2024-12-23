@@ -9,6 +9,7 @@ from pathlib import Path
 import re
 import os
 
+from loguru import logger#日志记录
 from datetime import datetime
 import time
 import json
@@ -36,14 +37,14 @@ def gets(url):
         if response.status_code == 200:
             return response.text
         if response.status_code == 404:
-            print('网址不存在')
+            logger.warning('网址不存在')
             return 'null'
         print(response.status_code)
-        print(url+'访问出错')
+        logger.warning(url+'访问出错')
         time.sleep(1)
         gets(url)
     except:
-        print(url+'访问崩溃,请检查网络')
+        logger.warning(url+'访问崩溃,请检查网络')
         time.sleep(1)
         gets(url)
 
@@ -54,14 +55,14 @@ def api_post(url):
         if response.status_code == 200:
             return response
         if response.status_code == 404:
-            print('网址不存在')
+            logger.warning('网址不存在')
             return 'null'
         print(response)
-        print(url+'访问出错')
+        logger.warning(url+'访问出错')
         time.sleep(1)
         gets(url)
     except:
-        print(url+'访问崩溃,请检查网络')
+        logger.warning(url+'访问崩溃,请检查网络')
         time.sleep(1)
         gets(url)
 
@@ -80,6 +81,9 @@ def clean_name(strs):
 
 #下载列表去重
 def dic(info):
+    """
+    去重
+    """
     new_list = []#创建临时列表
     for a in info:
         if a == 'null':
@@ -87,6 +91,18 @@ def dic(info):
         if not a in new_list:
             new_list.append(a)
     return new_list
+
+def get_local_articles(localdir:str):
+    """
+    从本地读取文章
+    """
+    local_articles = []
+    p = Path(localdir).resolve()
+    for child in p.iterdir():
+        local_articles.append(child)
+    logger.debug('本地文章数量：'+str(len(local_articles)))
+    print(local_articles)
+    return local_articles
 
 #获取与修改下载列表
 def downlist(set='null'):
@@ -143,6 +159,13 @@ def save_set(set):
     with open('set.json','w') as f:
         json.dump(set,f)
 
+def clean_html(data):
+    #获取txt格式
+    txt = data.replace('</p>','')#doc.summary()为提取的网页正文但包含html控制符，这一步是替换换行符
+    txt = re.sub(r'</?\w+[^>]*>', '', txt)      #这一步是去掉<****>内的内容
+    txt = txt.replace('&nbsp;','')
+    logger.debug('清理html完成')
+    return txt
 
 #readability接口解析
 def clean_1(data): #获取网站正文文本
@@ -273,6 +296,8 @@ def lofter_api(targetblogid:int,postid:int) -> dict:
     writer img = 作者头图
     info = 文章内容
     img = 图片链接
+    txt = 纯文本
+
     """
 
     json_answer = api_post('https://api.lofter.com/oldapi/post/detail.api?product=lofter-android-7.3.4&targetblogid='+str(targetblogid)+'&supportposttypes=1,2,3,4,5,6&offset=0&postdigestnew=1&postid='+str(postid)+'&blogId='+str(targetblogid)+'&checkpwd=1&needgetpoststat=1').json()
@@ -283,7 +308,7 @@ def lofter_api(targetblogid:int,postid:int) -> dict:
     info['msg'] = json_answer['meta']['msg']#状态信息
     #判断作品状态
     if str(info['status']) == '4202':#作品被删除
-        print(info['msg'])
+        logger.debug(info['msg'])
         info['status'] = 404
         info['title'] = '错误'
         info['writer'] = {}
@@ -306,6 +331,7 @@ def lofter_api(targetblogid:int,postid:int) -> dict:
     info['info'] = json_answer['response']['posts'][0]['post']['content']#文章内容
     info['type'] = json_answer['response']['posts'][0]['post']['type']#文章类型 1为文档 2为含有图片 3为音乐（？
     info['img'] = []
+    info['txt'] = clean_html(info['info'])#txt
     if info['type'] == 2:
         for a in json.loads(json_answer['response']['posts'][0]['post']['photoLinks']):#图片链接
             info['img'].append(a['raw'])
@@ -340,15 +366,15 @@ def lofter_post_list(url):
     return post
 
 def down(data,local_dir):
-    text = clean_1(data['html']) #清洗文本
+    text = data['txt']
     #检查是否有有效文本信息
-    test = text['txt'].replace('\n','')
+    test = text.replace('\n','')
     if test == '':
         test = 'null'
-    data['txt'] = text['txt']
+    data['txt'] = test
     if data['title'] == 'null':
         return
-    print('数据分析完毕')
+    logger.debug('数据分析完毕')
     #创建根文件夹
     save_dir =str(Path(str(local_dir)+'/'+clean_name(data['title'])).resolve())
     a = 0
@@ -361,17 +387,13 @@ def down(data,local_dir):
             break
     os.makedirs(save_dir,exist_ok=True)
 
-    #保存元数据为json以便调用
-    print('保存元数据')
-    save_json(Path(save_dir+'/entry.json'),data)
-
     #创建下载
-    if len(data['image']) != 0:
-        print('启动媒体数据本地化')
+    if len(data['img']) != 0:
+        logger.debug('启动媒体数据本地化')
         os.makedirs(Path(save_dir+'/img'),exist_ok=True)#创建临时文件夹
-        down_img(data['image'],Path(save_dir+'/img'))
+        down_img(data['img'],Path(save_dir+'/img'))
             #修正aria下载图片文件名错误
-        print('修正下载文件名错误')
+        logger.debug('修正下载文件名错误')
         down_name = os.listdir(Path(save_dir+'/img'))
         for change_name in down_name:
             if 'img%2F' in change_name:
@@ -379,22 +401,44 @@ def down(data,local_dir):
                 true_name = change_name.replace('%2F','')
                 #true_name = true_name[3:]
                 os.rename(Path(save_dir+'/img/'+change_name),Path(save_dir+'/img/'+true_name))
-        print('媒体文件下载完毕')
+        logger.debug('媒体文件下载完毕')
 
     #html本地化
         # 截取图片文件名
     new_img_list = []
-    for url in data['image']:
+    for url in data['img']:
         img_name = url.split('/').pop()
         new_img_list.append(img_name)
     for num in range(len(new_img_list)):
-        data['html'] = data['html'].replace(data['image'][num],'/img/'+new_img_list[num])
+        data['info'] = data['info'].replace(data['img'][num],'/img/'+new_img_list[num])
     #创建index.html
-    if data['html'] != 'null':
-        save_txt(Path(save_dir+'/index.html'),data['html'])
+    if data['info'] != 'null':
+        save_txt(Path(save_dir+'/index.html'),data['info'])
     if data['txt'] != 'null':
         save_txt(Path(save_dir+'/index.txt'),data['txt'])
-    print('索引链接创建完成')
-    print('本地化完成')
+    logger.debug('索引链接创建完成')
+
+    #保存元数据为json以便调用
+    logger.debug('保存元数据')
+    data.pop('info')#删除html内容，防止占用过多空间
+    data.pop('txt')#删除txt内容，防止占用过多空间
+    save_json(Path(save_dir+'/entry.json'),data)
+    logger.debug('本地化完成')
     return
 
+def lofter_request_info(url):
+    #格式化链接
+    logger.debug('发送请求 '+url)
+    id = re.findall('/post/(.*?_.*)',url)[0]
+    id = id.split('_')
+    targetblogid = int(id[0],16)
+    blogid = int(id[1],16)
+    #发送请求
+    logger.debug('targetblogid '+str(targetblogid))
+    logger.debug('blobid '+str(blogid))
+    answer = lofter_api(targetblogid,blogid)
+    if answer['status'] != 200:#如果返回不正常
+        #弹出错误弹窗
+        return 'error'
+    return answer
+    
