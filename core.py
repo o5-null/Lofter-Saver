@@ -17,18 +17,32 @@ import pickle#数据持久化
 list = []
 fin_list = []
 
+
 brower = requests.Session() #创建浏览器
 headers = {
-        'User-Agent': 'Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.20 Safari/537.36'
-    }
+ #'x-device':'hXriTGNOmtmur+Tu/1D6+WaUESjo5Ccod12fMWkJd2EdseYwrN8mVvzdHjbV9Tr7',
+ #'lofproduct':'lofter-android-8.1.0',
+ 'user-agent':'LOFTER-Android 8.1.0 (V2245A; Android 12; null) WIFI',
+ #'authorization':'ThirdParty LOFTER#ed5ffb1661fa1e40804f537a4c8c3cf2a90f965e442a0ba5ad6437cc881d21d313fb721ef255c5c4523cbacf706ed6d026837f1229a486bd8f6a1b6a937d0188747a787ef97032392c822061e489dce4',
+ #'market':'LOFTER',
+ #'deviceid':'0447d047333e0441',
+ #'dadeviceid':'2b9c36bce0eb3b34f4a04ad085ee5f1979d73831',
+ #'androidid':'0447d047333e0441',
+ #'x-reqid':'Q632K1S9',
+ 'accept-encoding':'br,gzip',
+ 'content-type':'application/x-www-form-urlencoded; charset=utf-8',
+ #'content-length':'210',
+ 'cookie':'NTESwebSI=4819B9242EE3F2EF1A896B3B9B6F59AA.lofter-tomcat-docker-lftpro-3-avkys-13dx0-74c7c4bd9d-tcv28-8080'}
+
 headers_phone = {
     'User-Agent': 'Mozilla/5.0 (Linux; Android 8.0.0; PRA-AL00X Build/HONORPRA-AL00X; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/77.0.3865.120 MQQBrowser/6.2 TBS/045714 Mobile Safari/537.36'
     }
 api_url = 'http://url2api.applinzi.com/' # URL2Article API地址，使用体验版或购买独享资源
 
 api_headers = {'User-Agent': 'LOFTER-Android 7.3.4 (PRA-AL00X; Android 8.0.0; null) WIFI'}
-api_cookies = {'Cookie': 'usertrack=dZPgEWPiVMNF6YfwJEIHAg==; NEWTOKEN=ZGUyN2NjOTE1YzE2ZmIwOTM0ZGU5MTIwYjJkZjBhNDJkMDI3YTliNGE4M2ZhMjkxYmY3ODZkN2VkNWRhZTBkNDE1Y2NkNDg4ZDUyMDAzZWNmNWUyMjgwNWY5NTQ2MGZm; NTESwebSI=DFD9B345542ECECF843D7DC7D99313F2.lofter-tomcat-docker-lftpro-3-avkys-cd6be-774f69457-rggg6-8080'}
-
+api_cookies = {'Cookie': 'NTESwebSI=D557F7AC800EC08EEEC2A123A2E0CF70.lofter-tomcat-docker-lftpro-3-avkys-13dx0-74c7c4bd9d-7g7pp-8080; Path=/; HttpOnly'}
+content_type = "application/x-www-form-urlencoded; charset=utf-8"
+product = 'lofter-android-8.1.1'
 #get
 def gets(url):
     try:
@@ -48,10 +62,13 @@ def gets(url):
         time.sleep(1)
         gets(url)
 
-def api_post(url):
+def get_cookies(url):
+    '''
+    需要登陆才能请求的api
+    '''
     try:
         #cj = {i.split("=")[0]:i.split("=")[1] for i in api_cookies.split(";")}
-        response = brower.post(url=url,headers=api_headers,cookies=api_cookies,timeout=5)
+        response = brower.post(url=url,cookies=api_cookies,headers=headers,timeout=5)
         if response.status_code == 200:
             return response
         if response.status_code == 404:
@@ -60,11 +77,32 @@ def api_post(url):
         print(response)
         logger.warning(url+'访问出错')
         time.sleep(1)
-        gets(url)
+        get_cookies(url)
     except:
         logger.warning(url+'访问崩溃,请检查网络')
         time.sleep(1)
-        gets(url)
+        get_cookies(url)
+
+def post_cookies(url,data):
+    '''
+    需要登陆带参数才能请求的api
+    '''
+    try:
+        #cj = {i.split("=")[0]:i.split("=")[1] for i in api_cookies.split(";")}
+        response = brower.post(url=url,headers=headers,data=data,timeout=5)
+        if response.status_code == 200:
+            return response
+        if response.status_code == 404:
+            logger.warning('网址不存在')
+            return 'null'
+        print(response)
+        logger.warning(url+'访问出错')
+        time.sleep(1)
+        post_cookies(url)
+    except:
+        logger.warning(url+'访问崩溃,请检查网络')
+        time.sleep(1)
+        post_cookies(url,data)
 
 #清洗文件名
 def clean_name(strs):
@@ -308,7 +346,7 @@ def lofter_api(targetblogid:int,postid:int) -> dict:
 
     """
 
-    json_answer = api_post('https://api.lofter.com/oldapi/post/detail.api?product=lofter-android-7.3.4&targetblogid='+str(targetblogid)+'&supportposttypes=1,2,3,4,5,6&offset=0&postdigestnew=1&postid='+str(postid)+'&blogId='+str(targetblogid)+'&checkpwd=1&needgetpoststat=1').json()
+    json_answer = get_cookies('https://api.lofter.com/oldapi/post/detail.api?product=lofter-android-8.1.0&targetblogid='+str(targetblogid)+'&supportposttypes=1,2,3,4,5,6&offset=0&postdigestnew=1&postid='+str(postid)+'&blogId='+str(targetblogid)+'&checkpwd=1&needgetpoststat=1').json()
     info = {}
     info['targetblogid'] = targetblogid
     info['postid'] = postid
@@ -348,15 +386,35 @@ def lofter_api(targetblogid:int,postid:int) -> dict:
     info['like'] = json_answer['response']['posts'][0]['post']['postCount']['favoriteCount']#文章点赞数
     info['txt'] = clean_html(info['info'])#txt
     if info['type'] == 2:
-        for a in json.loads(json_answer['response']['posts'][0]['post']['photoLinks']):#图片链接
+        for a in json.loads(json_answer['response']['posts'][0]['post']['photoLinks']):#图片链接%
             info['img'].append(a['raw'])
         #os.makedirs(Path('bug'),exist_ok=True)#创建临时文件夹
         #save_json(str(Path('bug/'+str(targetblogid)+'_'+str(postid)+'.json')),json_answer)
         #print('出现错误')
     return info
 
-def lofter_writer_api():
-    json_answer = api_post('https://api.lofter.com//v1.1/postCollection.api?product=lofter-android-8.1.1')
+def lofter_writer_api(targetblogid,offset:int,limit:int):
+    '''
+    targetblogid:主页id
+    offset:偏移量，这次获取的作品的起始位置
+    limit:获取作品数量
+
+    返回参数：
+
+    '''
+    data = {"supportposttypes": "1,2,3,4,5,6",
+        ##"blogdomain": blogname,#blogname和targetblogid有一个就行
+        "targetblogid": targetblogid,
+        "offset": offset,#偏移量，这次获取的作品的起始位置
+        "postdigestnew": 1,
+        "returnData": 1,
+        "limit": limit,#获取作品数量
+        "openFansVipPlan": 0,
+        "checkpwd": 1,
+        "needgetpoststat": 1,
+        "method": "getPostLists"#指示为获取作品列表
+    }
+    json_answer = post_cookies('https://api.lofter.com/v2.0/blogHomePage.api?product=lofter-android-8.1.0',data).json()
     return json_answer
 
 #提取页面文章列表
