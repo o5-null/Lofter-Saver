@@ -294,8 +294,16 @@ def lofter_api(targetblogid:int,postid:int) -> dict:
     title = 文章标题
     writer name = 作者名
     writer img = 作者头图
+    writer blogname = 作者名
+    writer homepageurl = 作者主页
+    writer idlocation = 作者ip地址
     info = 文章内容
+    type = 文章类型 1为文档 2为含有图片 3为音乐（？
     img = 图片链接
+    publishtime = 发布时间
+    taglist = 文章标签
+    hot = 文章热度
+    like = 文章点赞数
     txt = 纯文本
 
     """
@@ -308,7 +316,7 @@ def lofter_api(targetblogid:int,postid:int) -> dict:
     info['msg'] = json_answer['meta']['msg']#状态信息
     #判断作品状态
     if str(info['status']) == '4202':#作品被删除
-        logger.debug(info['msg'])
+        logger.warning(info['msg'])
         info['status'] = 404
         info['title'] = '错误'
         info['writer'] = {}
@@ -326,11 +334,18 @@ def lofter_api(targetblogid:int,postid:int) -> dict:
     if info['title'] == '':
         info['title'] = datetime.utcnow().strftime('%Y-%m-%d %H-%M-%S %f')
     info['writer'] = {}
-    info['writer']['name'] = json_answer['response']['posts'][0]['post']['blogInfo']['blogNickName']#作者名
+    info['writer']['nickname'] = json_answer['response']['posts'][0]['post']['blogInfo']['blogNickName']#作者昵称
     info['writer']['img'] = json_answer['response']['posts'][0]['post']['blogInfo']['bigAvaImg']#作者头图
+    info['writer']['blogname'] = json_answer['response']['posts'][0]['post']['blogInfo']['blogName']#作者名
+    info['writer']['homepageurl'] = json_answer['response']['posts'][0]['post']['blogInfo']['homePageUrl']#作者主页
+    info['writer']['idlocation'] = json_answer['response']['posts'][0]['post']['bpostCollection']['ipLocation']#作者ip地址
     info['info'] = json_answer['response']['posts'][0]['post']['content']#文章内容
     info['type'] = json_answer['response']['posts'][0]['post']['type']#文章类型 1为文档 2为含有图片 3为音乐（？
     info['img'] = []
+    info['publishtime'] = json_answer['response']['posts'][0]['post']['publishTime']#发布时间
+    info['taglist'] = json_answer['response']['posts'][0]['post']['tagList']#文章标签
+    info['hot'] = json_answer['response']['posts'][0]['post']['postCount']['postHot']#文章热度
+    info['like'] = json_answer['response']['posts'][0]['post']['postCount']['favoriteCount']#文章点赞数
     info['txt'] = clean_html(info['info'])#txt
     if info['type'] == 2:
         for a in json.loads(json_answer['response']['posts'][0]['post']['photoLinks']):#图片链接
@@ -339,6 +354,10 @@ def lofter_api(targetblogid:int,postid:int) -> dict:
         #save_json(str(Path('bug/'+str(targetblogid)+'_'+str(postid)+'.json')),json_answer)
         #print('出现错误')
     return info
+
+def lofter_writer_api():
+    json_answer = api_post('https://api.lofter.com//v1.1/postCollection.api?product=lofter-android-8.1.1')
+    return json_answer
 
 #提取页面文章列表
 def lofter_post_list(url):

@@ -129,10 +129,16 @@ MDBoxLayout:
                                 adaptive_height: True#适应高度
                                 id: article_content
                                 text: "article_content"
+                            MDSmartTile:
 
         BaseScreen:#作者详情屏幕
             name: "Author Screen"
-            #TODO
+            MDScrollView:
+                do_scroll_x: False#不允许x轴滚动
+                do_scroll_y: True#允许y轴滚动
+                MDBoxLayout:
+                    id: author_info
+                    orientation: "vertical"
 
         BaseScreen:
             name: "Progress Screen"
