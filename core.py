@@ -393,14 +393,36 @@ def lofter_api(targetblogid:int,postid:int) -> dict:
         #print('出现错误')
     return info
 
-def lofter_writer_api(targetblogid,offset:int,limit:int):
+#获取作者信息
+def lofter_writer_info_api(targetblogid):
+    data = {"supportposttypes": "1,2,3,4,5,6",
+        ##"blogdomain": blogname,#blogname和targetblogid有一个就行
+        "targetblogid": targetblogid,
+        #"offset": offset,#偏移量，这次获取的作品的起始位置
+        #"postdigestnew": 1,
+        "returnData": 1,
+        #"limit": limit,#获取作品数量
+        #"openFansVipPlan": 0,
+        "checkpwd": 1,
+        "needgetpoststat": 1,
+        "method": "getBlogInfoDetail"#指示为获取作者信息
+    }
+    json_answer = post_cookies('https://api.lofter.com/v2.0/blogHomePage.api?product=lofter-android-8.1.0',data).json()
+    return json_answer
+
+#获取作者文章列表
+def lofter_writer_list_api(targetblogid,offset:int,limit:int):
     '''
     targetblogid:主页id
     offset:偏移量，这次获取的作品的起始位置
     limit:获取作品数量
 
     返回参数：
-
+    status = api状态
+    msg = 状态信息
+    archives = 每月文章数量
+    posts = 文章列表
+    toppost = 置顶文章
     '''
     data = {"supportposttypes": "1,2,3,4,5,6",
         ##"blogdomain": blogname,#blogname和targetblogid有一个就行
@@ -415,7 +437,16 @@ def lofter_writer_api(targetblogid,offset:int,limit:int):
         "method": "getPostLists"#指示为获取作品列表
     }
     json_answer = post_cookies('https://api.lofter.com/v2.0/blogHomePage.api?product=lofter-android-8.1.0',data).json()
-    return json_answer
+    info = {}
+    info['status'] = json_answer['meta']['status']#api状态
+    info['msg'] = json_answer['meta']['msg']#状态信息
+    info['archives'] = json_answer['response']['archives']#每月文章数量
+    info['posts'] = json_answer['response']['posts']#文章列表
+    info['toppost'] = json_answer['response']['topPost']#置顶文章
+
+    logger.debug('获取文章列表:'+str(targetblogid)+', offset:'+str(offset)+', limit:'+str(limit))
+
+    return info
 
 #提取页面文章列表
 def lofter_post_list(url):
