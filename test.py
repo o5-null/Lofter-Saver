@@ -12,7 +12,7 @@ from kivymd.uix.navigationbar import MDNavigationBar, MDNavigationItem
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.snackbar.snackbar import MDSnackbar, MDSnackbarButtonContainer, MDSnackbarCloseButton ,MDSnackbarActionButton, MDSnackbarText, MDSnackbarSupportingText, MDSnackbarActionButtonText
 from kivymd.uix.list.list import MDListItem, MDListItemSupportingText, MDListItemHeadlineText
-
+from kivymd.uix.imagelist.imagelist import MDSmartTileImage,MDSmartTile
 class BaseMDNavigationItem(MDNavigationItem):
     icon = StringProperty()
     text = StringProperty()
@@ -125,11 +125,24 @@ MDBoxLayout:
 
                         MDBoxLayout:
                             adaptive_height: True
+                            orientation: "vertical"
                             MDLabel:
                                 adaptive_height: True#适应高度
                                 id: article_content
                                 text: "article_content"
-                            MDSmartTile:
+                            MDBoxLayout:
+                                adaptive_height: True
+                                orientation: "vertical"
+
+                                FitImage:
+                                    orientation: "vertical"
+                                    adaptive_height: True#适应高度
+                                    pos_hint: {"top": 1}
+                                    #pos_hint: {"top": 1}
+                                    #size: self.texture_size
+                                    fit_mode: "contain"
+                                    source: "2.jpg"
+
 
         BaseScreen:#作者详情屏幕
             name: "Author Screen"
@@ -160,6 +173,7 @@ MDBoxLayout:
                 MDTopAppBarTitle:
                     text: "设置"
                     pos_hint: {"center_x": .5}
+                    
 
         
 
@@ -230,12 +244,25 @@ def lofter_print(self,answer):
     '''
     打印文章信息
     '''
-    logger.debug('作者 "'+answer['writer']['name']+'"')
-    self.root.ids.article_user_name.text = answer['writer']['name']
+    logger.debug('作者 "'+answer['writer']['blogname']+'"')
+    self.root.ids.article_user_name.text = answer['writer']['blogname']
     self.root.ids.article_user_img.source = answer['writer']['img']
     self.root.ids.article_title.text = answer['title']
     self.root.ids.article_content.text = answer['txt']
     logger.debug('文章覆盖详情')
+    return
+    self.root.ids.article_img.clear_widgets()#清除旧显示图片内容
+    if len(answer['img']) != 0:
+        for a in answer['img']:#遍历添加图片
+            self.root.ids.article_img.add_widget(
+                MDSmartTile(
+                    MDSmartTileImage(
+                        source=a,
+                    )
+                )
+            )
+
+
 
 def start_url(url):
     if 'lofter' in url:#如果为lofter地址
@@ -287,20 +314,16 @@ def refresh_local_articles(self):
         id=i.stem
                 )
             )
-    local_articles = core.get_local_articles('D:\code\Lofter-Saver\Download')
-    for i in local_articles:
+    local_articles = core.get_local_articles('.\Download')
+    b = []
+    for a in self.root.ids.local_articles_list.children:
+        b.append(a.id)
+    for i in local_articles:#检查本地文章列表在不在页面中
         #检查页面中有无文章
-        if len(self.root.ids.local_articles_list.children) == 0:
-            add_list(self,i.stem)
-            logger.info('本地列表添加文章：'+i.stem)
         #检查是否存在重复文章
-        for o in self.root.ids.local_articles_list.children:
-            if o.id == i.stem:
-                continue
-            else:
+        if not i.stem in b:
                 add_list(self,i.stem)
                 logger.info('本地列表添加文章：'+i.stem)
-
     return
 class Main(MDApp):
     urlinput = ObjectProperty(None)#url输入框
@@ -310,6 +333,7 @@ class Main(MDApp):
     article_user_img = ObjectProperty(None)#文章作者头像
     article_content = ObjectProperty(None)#文章内容
     local_articles_list = ObjectProperty(None)#本地文章列表
+    #article_img = ObjectProperty(None)#文章图片
     def test(self):
         global article_data
         answer = start_url(self.root.ids.urlinput.text)
@@ -319,7 +343,7 @@ class Main(MDApp):
 
     def on_download(self):#下载文章
         global article_data
-        core.down(article_data,'/')
+        core.down(article_data,'F:\Lofter-Saver\Download')
         logger.info('"'+article_data['title']+'" 下载成功')
         snakebar(self,'"'+article_data['title']+'" 下载成功')
 

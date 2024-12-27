@@ -19,7 +19,7 @@ fin_list = []
 
 
 brower = requests.Session() #创建浏览器
-headers = {
+headers_app = {
  #'x-device':'hXriTGNOmtmur+Tu/1D6+WaUESjo5Ccod12fMWkJd2EdseYwrN8mVvzdHjbV9Tr7',
  #'lofproduct':'lofter-android-8.1.0',
  'user-agent':'LOFTER-Android 8.1.0 (V2245A; Android 12; null) WIFI',
@@ -33,7 +33,9 @@ headers = {
  'content-type':'application/x-www-form-urlencoded; charset=utf-8',
  #'content-length':'210',
  'cookie':'NTESwebSI=4819B9242EE3F2EF1A896B3B9B6F59AA.lofter-tomcat-docker-lftpro-3-avkys-13dx0-74c7c4bd9d-tcv28-8080'}
-
+headers = {
+        'User-Agent': 'Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.20 Safari/537.36'
+    }
 headers_phone = {
     'User-Agent': 'Mozilla/5.0 (Linux; Android 8.0.0; PRA-AL00X Build/HONORPRA-AL00X; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/77.0.3865.120 MQQBrowser/6.2 TBS/045714 Mobile Safari/537.36'
     }
@@ -89,7 +91,7 @@ def post_cookies(url,data):
     '''
     try:
         #cj = {i.split("=")[0]:i.split("=")[1] for i in api_cookies.split(";")}
-        response = brower.post(url=url,headers=headers,data=data,timeout=5)
+        response = brower.post(url=url,headers=headers_app,data=data,timeout=5)
         if response.status_code == 200:
             return response
         if response.status_code == 404:
@@ -139,7 +141,6 @@ def get_local_articles(localdir:str):
     for child in p.iterdir():
         local_articles.append(child)
     logger.debug('本地文章数量：'+str(len(local_articles)))
-    print(local_articles)
     return local_articles
 
 #获取与修改下载列表
@@ -346,7 +347,8 @@ def lofter_api(targetblogid:int,postid:int) -> dict:
 
     """
 
-    json_answer = get_cookies('https://api.lofter.com/oldapi/post/detail.api?product=lofter-android-8.1.0&targetblogid='+str(targetblogid)+'&supportposttypes=1,2,3,4,5,6&offset=0&postdigestnew=1&postid='+str(postid)+'&blogId='+str(targetblogid)+'&checkpwd=1&needgetpoststat=1').json()
+    json_answer = get_cookies('https://api.lofter.com/oldapi/post/detail.api?product=lofter-android-8.1.0&targetblogid='+str(targetblogid)+'&supportposttypes=1,2,3,4,5,6&offset=0&postdigestnew=1&postid='+str(postid)+'&blogId='+str(targetblogid)+'&checkpwd=1&needgetpoststat=1')
+    json_answer = json_answer.json()
     info = {}
     info['targetblogid'] = targetblogid
     info['postid'] = postid
@@ -376,7 +378,7 @@ def lofter_api(targetblogid:int,postid:int) -> dict:
     info['writer']['img'] = json_answer['response']['posts'][0]['post']['blogInfo']['bigAvaImg']#作者头图
     info['writer']['blogname'] = json_answer['response']['posts'][0]['post']['blogInfo']['blogName']#作者名
     info['writer']['homepageurl'] = json_answer['response']['posts'][0]['post']['blogInfo']['homePageUrl']#作者主页
-    info['writer']['idlocation'] = json_answer['response']['posts'][0]['post']['bpostCollection']['ipLocation']#作者ip地址
+    info['writer']['idlocation'] = json_answer['response']['posts'][0]['post']['ipLocation']#作者ip地址
     info['info'] = json_answer['response']['posts'][0]['post']['content']#文章内容
     info['type'] = json_answer['response']['posts'][0]['post']['type']#文章类型 1为文档 2为含有图片 3为音乐（？
     info['img'] = []
@@ -395,6 +397,16 @@ def lofter_api(targetblogid:int,postid:int) -> dict:
 
 #获取作者信息
 def lofter_writer_info_api(targetblogid):
+    '''
+    targetblogid:主页id
+    返回参数：
+    status = api状态
+    msg = 状态信息
+
+
+
+
+    '''
     data = {"supportposttypes": "1,2,3,4,5,6",
         ##"blogdomain": blogname,#blogname和targetblogid有一个就行
         "targetblogid": targetblogid,
@@ -408,6 +420,10 @@ def lofter_writer_info_api(targetblogid):
         "method": "getBlogInfoDetail"#指示为获取作者信息
     }
     json_answer = post_cookies('https://api.lofter.com/v2.0/blogHomePage.api?product=lofter-android-8.1.0',data).json()
+    info = {}
+    info['status'] = json_answer['meta']['status']#api状态
+    info['msg'] = json_answer['meta']['msg']#状态信息
+
     return json_answer
 
 #获取作者文章列表
@@ -549,4 +565,3 @@ def lofter_request_info(url):
         #弹出错误弹窗
         return 'error'
     return answer
-    
