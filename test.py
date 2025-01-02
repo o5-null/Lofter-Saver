@@ -46,7 +46,7 @@ MDBoxLayout:
         id: screen_manager
 
         BaseScreen:#主屏幕
-            name: "Main Screen"
+            name: "主界面"
             MDTextField:
                 adaptive_size: True
                 multiline: True
@@ -74,7 +74,7 @@ MDBoxLayout:
                     icon: "plus"
 
                 MDButtonText:
-                    text: "Elevated"
+                    text: "开始解析"
 
         BaseScreen:#文章详情屏幕
             name: "Article Screen"
@@ -154,7 +154,7 @@ MDBoxLayout:
                     orientation: "vertical"
 
         BaseScreen:
-            name: "Progress Screen"
+            name: "任务界面"
             MDScrollView:#滚动视图
                 do_scroll_x: False#不允许x轴滚动
                 do_scroll_y: True#允许y轴滚动
@@ -164,7 +164,7 @@ MDBoxLayout:
 
 
         BaseScreen:#设置屏幕
-            name: "Setting Screen"
+            name: "设置界面"
             MDTopAppBar:
                 type: "small"
                 size_hint_x: .8
@@ -184,17 +184,17 @@ MDBoxLayout:
 
         BaseMDNavigationItem
             icon: "gmail"
-            text: "Main Screen"
+            text: "主界面"
             active: True
-        BaseMDNavigationItem
-            icon: "article"
-            text: "Article Screen"
+        #BaseMDNavigationItem
+            #icon: "article"
+            #text: "Article Screen"
         BaseMDNavigationItem
             icon: "progress-clock"
-            text: "Progress Screen"
+            text: "任务界面"
 
         BaseMDNavigationItem
-            text: "Setting Screen"
+            text: "设置界面"
 
 
     
@@ -339,6 +339,7 @@ class Main(MDApp):
         answer = start_url(self.root.ids.urlinput.text)
         lofter_print(self,answer)
         article_data = answer
+        self.root.ids.screen_manager.current = 'Article Screen'
 
 
     def on_download(self):#下载文章
@@ -358,7 +359,7 @@ class Main(MDApp):
             item_text: str,
         ):#切换屏幕
             self.root.ids.screen_manager.current = item_text
-            if item_text == 'Progress Screen':
+            if item_text == '任务界面':
                 refresh_local_articles(self)#刷新本地列表
     def build(self):
         
