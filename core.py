@@ -137,6 +137,8 @@ def get_local_articles(localdir:str):
     从本地读取文章
     """
     local_articles = []
+    if not Path(localdir).exists():#如果文件夹不存在则创建
+        Path(localdir).mkdir(parents=True)
     p = Path(localdir).resolve()
     for child in p.iterdir():
         local_articles.append(child)
